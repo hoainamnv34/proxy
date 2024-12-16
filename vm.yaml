@@ -1,0 +1,50 @@
+---
+- name: Resize Disk on CentOS 7 with LVM
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure the new disk size is recognized
+      shell: echo 1 > /sys/class/block/{{ disk_name }}/device/rescan
+      args:
+        executable: /bin/bash
+      vars:
+        disk_name: "sda"  # Thay đổi nếu ổ đĩa khác (vd: sdb, sdc).
+
+    - name: Check current disk partition table
+      command: lsblk
+      register: disk_info
+
+    - name: Display disk information
+      debug:
+        var: disk_info.stdout
+
+    - name: Resize Physical Volume (PV)
+      command: pvresize /dev/{{ pv_partition }}
+      vars:
+        pv_partition: "sda2"  # Thay đổi nếu PV trên phân vùng khác (vd: sdb1).
+
+    - name: Extend Logical Volume (LV)
+      command: lvextend -l +100%FREE /dev/mapper/{{ lv_name }}
+      vars:
+        lv_name: "centos-root"  # Thay đổi nếu LV khác (vd: vg-name-lv).
+
+    - name: Expand XFS filesystem
+      shell: xfs_growfs /
+      when: fs_type == "xfs"
+      vars:
+        fs_type: "xfs"
+
+    - name: Expand ext4 filesystem (if applicable)
+      command: resize2fs /dev/mapper/{{ lv_name }}
+      when: fs_type == "ext4"
+      vars:
+        lv_name: "centos-root"
+        fs_type: "ext4"
+
+    - name: Verify new disk size
+      command: df -h
+      register: disk_usage
+
+    - name: Display updated disk usage
+      debug:
+        var: disk_usage.stdout
