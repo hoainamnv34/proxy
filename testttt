@@ -1,0 +1,61 @@
+---
+- name: Install and configure NFS Server
+  hosts: nfs_server
+  become: true
+
+  vars:
+    share_directory: /share-data
+    allowed_clients:
+      - "192.168.1.100"
+      - "192.168.1.10"
+
+  tasks:
+    - name: Update all packages
+      yum:
+        name: "*"
+        state: latest
+        update_only: yes
+
+    - name: Upgrade all packages
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Install NFS utilities and unzip
+      yum:
+        name:
+          - nfs-utils
+          - unzip
+        state: present
+
+    - name: Create the share directory
+      file:
+        path: "{{ share_directory }}"
+        state: directory
+        mode: '0755'
+        owner: nfsnobody
+        group: nfsnobody
+
+    - name: Enable and start required NFS services
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+      loop:
+        - rpcbind
+        - nfs-server
+
+    - name: Configure NFS exports
+      copy:
+        dest: /etc/exports
+        content: |
+          {% for client in allowed_clients %}
+          {{ share_directory }}    {{ client }}(rw,sync,no_root_squash,no_all_squash)
+          {% endfor %}
+      notify: Restart NFS Server
+
+  handlers:
+    - name: Restart NFS Server
+      systemd:
+        name: nfs-server
+        state: restarted
