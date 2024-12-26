@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Tên container cần kiểm tra
+CONTAINER_NAME="a"
+
+# Hình ảnh (image) cần dùng để tạo container
+IMAGE_NAME="your-image-name:tag"
+
+# Câu lệnh docker run
+DOCKER_RUN_CMD="docker run -d --name ${CONTAINER_NAME} ${IMAGE_NAME}"
+
+# Kiểm tra xem container có tồn tại không
+if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    # Kiểm tra container có đang chạy không
+    if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+        echo "Container '${CONTAINER_NAME}' is already running."
+    else
+        echo "Container '${CONTAINER_NAME}' exists but is not running. Starting it..."
+        docker start ${CONTAINER_NAME}
+        if [ $? -eq 0 ]; then
+            echo "Container '${CONTAINER_NAME}' started successfully."
+        else
+            echo "Failed to start container '${CONTAINER_NAME}'."
+        fi
+    fi
+else
+    echo "Container '${CONTAINER_NAME}' does not exist. Creating and starting it..."
+    eval "${DOCKER_RUN_CMD}"
+    if [ $? -eq 0 ]; then
+        echo "Container '${CONTAINER_NAME}' created and started successfully."
+    else
+        echo "Failed to create and start container '${CONTAINER_NAME}'."
+    fi
+fi
