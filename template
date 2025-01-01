@@ -1,0 +1,54 @@
+Dưới đây là nội dung template bạn có thể **copy trực tiếp** và dán vào Confluence:
+
+---
+
+## **THÔNG TIN TÍCH HỢP SERVICE MESH**  
+*Sử dụng nội bộ*  
+
+### **1. Thông tin dự án**  
+- **Tên dự án:**  
+- **Mã dự án:**  
+- **DevLead:**  
+- **Tác giả:**  
+- **Ngày:**  
+- **Người nhận:**  
+
+---
+
+### **2. Thông tin chi tiết các Service**  
+
+| **STT** | **Namespace**        | **Service**     | **Container Port**         | **Phụ thuộc**                      | **Mô tả sự phụ thuộc**                                                                                                                                     |
+|---------|-----------------------|-----------------|-----------------------------|-------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1       | `<Tên Namespace>`     | `<Tên Service>` | `<Port Application Container>` | `<Sự phụ thuộc>`                   | `<Diễn giải chi tiết>`                                                                                                                                      |
+| 2       | afad                 | afad-auth       | 8080                        | Spring-cloud-kubernetes-starter    | Service được viết bằng Java Spring. Service khi chạy, thông qua spring cloud kubernetes starter, lấy config tại runtime bằng cách gọi đến K8s API Server |
+
+---
+
+### **3. Danh sách các giao tiếp mạng của Service**  
+
+| **STT** | **Source Outbound Request** | **Destination**   | **Protocol** | **Method** | **Request URI**              |
+|---------|------------------------------|-------------------|--------------|------------|------------------------------|
+| 1       | `<DNS của Service nguồn>`    | `<DNS của Service đích>` | `<Giao thức>` | `<HTTP Method>` | `<API Path>`                 |
+| 2       | afad-example.afad-go         | afad-org.afad-go  | HTTP         | GET        | /orgs/search                 |
+| 3       | afad-unit.afad-go            | afad-unit.afad-go | gRPC         | POST       | /unit.UnitService/Search     |
+| 4       | afad-something.afad          | afad-example.afad | HTTP         | GET        | /example-path/*              |
+
+---
+
+### **4. Thông tin cấu hình expose Service ra ngoài cụm Kubernetes qua Istio Ingress Gateway**  
+
+| **STT** | **DNS Host**       | **Path Prefix**  | **Service Port** | **CORS Policy**                                                                                                                                         | **Kiểm tra ủy quyền request** |
+|---------|--------------------|------------------|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------|
+| 1       | `<DNS của Service>` | `<Phần tiền tố>` | `<Port>`         | `<CORS Header>`                                                                                                                                         | `<Yêu cầu định tuyến>`     |
+| 2       | afad-auth.afad-go   | /authentication | 8080             | allowOrigins: https://chat.vht.vn<br>allowMethods: GET, POST, PUT, OPTIONS<br>allowHeaders: *<br>allowCredentials: true                                 | có                         |
+
+---
+
+### **Hướng dẫn sử dụng:**  
+1. Điền các thông tin tương ứng vào các ô `<...>`.  
+2. Lưu trang trên Confluence để mọi người có thể truy cập.  
+3. Cập nhật định kỳ khi có thay đổi về service hoặc cấu hình.  
+
+--- 
+
+Bạn chỉ cần copy toàn bộ phần này và dán vào Confluence để sử dụng.
