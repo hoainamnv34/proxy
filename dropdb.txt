@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# MongoDB connection details
+DB_NAME="uk"           # Tên database cần xóa
+MONGO_HOST="localhost" # Địa chỉ MongoDB
+MONGO_PORT="27017"     # Cổng MongoDB
+
+# Kiểm tra xem database có tồn tại hay không
+DB_EXISTS=$(mongo --host "$MONGO_HOST" --port "$MONGO_PORT" --quiet --eval "
+db.adminCommand('listDatabases').databases.map(db => db.name).includes('$DB_NAME');
+")
+
+if [ "$DB_EXISTS" = "true" ]; then
+  echo "Database '$DB_NAME' exists. Dropping the database..."
+  
+  # Xóa database
+  mongo --host "$MONGO_HOST" --port "$MONGO_PORT" --quiet --eval "
+  db.getSiblingDB('$DB_NAME').dropDatabase();
+  print('Database \"$DB_NAME\" has been dropped.');
+  "
+  
+  if [ $? -eq 0 ]; then
+    echo "Database '$DB_NAME' dropped successfully."
+  else
+    echo "Error while dropping the database '$DB_NAME'."
+  fi
+else
+  echo "Database '$DB_NAME' does not exist. No action required."
+fi
