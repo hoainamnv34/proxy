@@ -1,0 +1,178 @@
+Hướng dẫn chi tiết sử dụng dpkg-scanpackages để tạo Local APT Repository
+Phương pháp này giúp bạn nhanh chóng tạo một kho APT nội bộ chứa các gói .deb mà không cần máy chủ HTTP.
+
+📌 1. Chuẩn bị môi trường
+Cài đặt công cụ cần thiết
+dpkg-scanpackages có sẵn trong gói dpkg-dev, nếu chưa có, bạn có thể cài đặt:
+
+bash
+Copy
+Edit
+sudo apt update
+sudo apt install dpkg-dev
+📌 2. Tạo thư mục chứa gói và sao chép các file .deb
+Giả sử bạn muốn tạo một kho chứa các gói .deb trong thư mục /var/local/apt-repo:
+
+bash
+Copy
+Edit
+sudo mkdir -p /var/local/apt-repo
+sudo cp *.deb /var/local/apt-repo/
+📌 Lưu ý:
+
+Bạn có thể đặt các gói .deb từ nhiều nguồn vào thư mục này.
+Nếu kho dùng cho nhiều phiên bản Ubuntu/Debian, có thể chia thành các thư mục riêng, ví dụ:
+bash
+Copy
+Edit
+/var/local/apt-repo/focal
+/var/local/apt-repo/jammy
+📌 3. Tạo tệp Packages.gz bằng dpkg-scanpackages
+Di chuyển vào thư mục repository và tạo danh sách gói:
+
+bash
+Copy
+Edit
+cd /var/local/apt-repo
+dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+📌 Giải thích lệnh:
+
+dpkg-scanpackages . /dev/null: Quét tất cả các gói .deb trong thư mục hiện tại (.) và tạo danh sách gói.
+| gzip -9c > Packages.gz: Nén danh sách này thành Packages.gz để APT có thể sử dụng.
+🔹 Sau khi chạy lệnh, trong thư mục /var/local/apt-repo sẽ có hai tệp quan trọng:
+
+bash
+Copy
+Edit
+Packages.gz  # Danh sách các gói ở dạng nén
+Packages      # Danh sách các gói ở dạng không nén (nếu cần)
+📌 4. Cấu hình APT để sử dụng Local Repository
+Cách 1: Thêm trực tiếp vào sources.list
+Mở file cấu hình:
+
+bash
+Copy
+Edit
+sudo nano /etc/apt/sources.list
+Thêm dòng sau vào cuối file:
+
+bash
+Copy
+Edit
+deb [trusted=yes] file:/var/local/apt-repo ./
+Lưu và thoát (Ctrl + X, Y, Enter).
+
+Cách 2: Tạo file sources riêng
+Thay vì chỉnh sửa sources.list, bạn có thể tạo một file mới:
+
+bash
+Copy
+Edit
+echo "deb [trusted=yes] file:/var/local/apt-repo ./" | sudo tee /etc/apt/sources.list.d/local-repo.list
+📌 5. Cập nhật và cài đặt gói từ Local Repository
+Sau khi thêm repository, cập nhật danh sách gói:
+
+bash
+Copy
+Edit
+sudo apt update
+Kiểm tra xem APT đã nhận diện được gói hay chưa:
+
+bash
+Copy
+Edit
+apt-cache search <tên_gói>
+Cài đặt gói từ repository:
+
+bash
+Copy
+Edit
+sudo apt install <tên_gói>
+📌 6. Tự động cập nhật khi thêm gói mới
+Mỗi khi thêm gói .deb mới vào /var/local/apt-repo/, bạn cần chạy lại lệnh:
+
+bash
+Copy
+Edit
+dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+sudo apt update
+💡 Mẹo: Để tự động cập nhật khi thêm gói mới, bạn có thể tạo một script:
+
+bash
+Copy
+Edit
+#!/bin/bash
+cd /var/local/apt-repo
+dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+apt update
+Lưu thành file update-local-repo.sh, cấp quyền thực thi:
+
+bash
+Copy
+Edit
+chmod +x update-local-repo.sh
+Chạy script mỗi khi cần cập nhật:
+
+bash
+Copy
+Edit
+./update-local-repo.sh
+📌 7. Cho phép repository truy cập qua HTTP (tuỳ chọn)
+Nếu bạn muốn các máy khác trong mạng sử dụng repository này, bạn có thể chia sẻ nó qua HTTP bằng nginx hoặc python3 -m http.server.
+
+Cách 1: Dùng Python (Nhanh và đơn giản)
+bash
+Copy
+Edit
+cd /var/local/apt-repo
+python3 -m http.server 8080
+Truy cập từ máy khác bằng:
+
+bash
+Copy
+Edit
+deb [trusted=yes] http://<IP_MÁY_CHỦ>:8080 ./
+Cách 2: Dùng Nginx (Ổn định hơn)
+Cài đặt Nginx:
+
+bash
+Copy
+Edit
+sudo apt install nginx
+Tạo cấu hình cho repo:
+
+bash
+Copy
+Edit
+sudo nano /etc/nginx/sites-available/local-repo
+Thêm nội dung:
+
+nginx
+Copy
+Edit
+server {
+    listen 80;
+    server_name repo.local;
+    root /var/local/apt-repo;
+    autoindex on;
+}
+Kích hoạt site và reload Nginx:
+
+bash
+Copy
+Edit
+sudo ln -s /etc/nginx/sites-available/local-repo /etc/nginx/sites-enabled/
+sudo systemctl restart nginx
+Sau đó, trên máy client thêm dòng này vào /etc/apt/sources.list:
+
+bash
+Copy
+Edit
+deb [trusted=yes] http://repo.local ./
+Và cập nhật APT:
+
+bash
+Copy
+Edit
+sudo apt update
+📌 Tổng kết
