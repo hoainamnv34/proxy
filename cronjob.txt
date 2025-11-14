@@ -1,0 +1,58 @@
+argocd account generate-token \
+  --account admin \
+  --server argocd-server.argocd.svc.cluster.local:443
+
+
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-token
+  namespace: argocd
+type: Opaque
+stringData:
+  token: "<TOKEN_CUA_BAN>"
+
+
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: argocd-sync-all-apps
+  namespace: argocd
+spec:
+  schedule: "0 0 * * *"   # 0h mỗi ngày
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: sync-apps
+              image: argoproj/argocd:v2.12.0   # Hoặc version bạn đang dùng
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "=== Starting scheduled sync for ALL Argo CD apps ==="
+                  APP_LIST=$(argocd app list -o name \
+                    --server argocd-server.argocd.svc.cluster.local:443 \
+                    --auth-token "$ARGOCD_AUTH_TOKEN" --grpc-web)
+
+                  echo "Apps found:"
+                  echo "$APP_LIST"
+
+                  for app in $APP_LIST; do
+                    echo "---- Syncing $app ----"
+                    argocd app sync "$app" \
+                      --server argocd-server.argocd.svc.cluster.local:443 \
+                      --auth-token "$ARGOCD_AUTH_TOKEN" --grpc-web
+                  done
+
+                  echo "=== Sync completed ==="
+              env:
+                - name: ARGOCD_AUTH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: argocd-token
+                      key: token
+          restartPolicy: OnFailure
